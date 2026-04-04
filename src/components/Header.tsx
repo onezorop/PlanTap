@@ -50,7 +50,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="h-14 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+      <header className="h-14 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-40 relative">
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
           {tabs.map(({ mode, label, icon }) => (
             <button
