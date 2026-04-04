@@ -1276,15 +1276,20 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('before-quit', () => {
+  // Only save and close database when truly quitting the app
   if (notificationInterval) {
     clearInterval(notificationInterval);
   }
   if (db) {
     saveDatabase();
     db.close();
-  }
-  if (process.platform !== 'darwin') {
-    app.quit();
+    console.log('Database saved and closed');
   }
 });
 
