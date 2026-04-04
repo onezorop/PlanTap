@@ -1,13 +1,16 @@
 const { app, BrowserWindow, ipcMain, Notification } = require('electron');
 const path = require('path');
-const Database = require('better-sqlite3');
+const fs = require('fs');
+
 const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
 
+// Database is loaded lazily after app is ready
 let db;
 let mainWindow;
 let notificationInterval = null;
+let dbPath;
 
 // Current schema version - increment this each time a migration is added
 const CURRENT_SCHEMA_VERSION = 2;
@@ -18,7 +21,6 @@ let lastNotifiedPhases = new Map(); // phaseId -> last notified time
 
 // Backup database before migration
 function backupDatabase(dbPath) {
-  const fs = require('fs');
   const backupPath = `${dbPath}.backup`;
   try {
     fs.copyFileSync(dbPath, backupPath);
@@ -30,10 +32,55 @@ function backupDatabase(dbPath) {
   }
 }
 
+// Helper: Execute a query and get all results
+function dbAll(sql, params = []) {
+  const stmt = db.prepare(sql);
+  if (params.length > 0) stmt.bind(params);
+  const results = [];
+  while (stmt.step()) {
+    results.push(stmt.getAsObject());
+  }
+  stmt.free();
+  return results;
+}
+
+// Helper: Execute a query and get one result
+function dbGet(sql, params = []) {
+  const stmt = db.prepare(sql);
+  if (params.length > 0) stmt.bind(params);
+  let result = null;
+  if (stmt.step()) {
+    result = stmt.getAsObject();
+  }
+  stmt.free();
+  return result;
+}
+
+// Helper: Execute a statement (INSERT, UPDATE, DELETE)
+function dbRun(sql, params = []) {
+  db.run(sql, params);
+  saveDatabase();
+}
+
+// Helper: Execute multiple SQL statements
+function dbExec(sql) {
+  db.exec(sql);
+  saveDatabase();
+}
+
+// Save database to file
+function saveDatabase() {
+  if (db && dbPath) {
+    const data = db.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(dbPath, buffer);
+  }
+}
+
 // Get current database version
 function getDbVersion() {
   try {
-    const row = db.prepare('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1').get();
+    const row = dbGet('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1');
     return row ? row.version : -1; // -1 means no migrations table yet
   } catch {
     return -1;
@@ -42,21 +89,19 @@ function getDbVersion() {
 
 // Set database version after migration
 function setDbVersion(version) {
-  db.prepare('INSERT INTO schema_migrations (version, appliedAt) VALUES (?, ?)').run(
-    version,
-    new Date().toISOString()
-  );
+  dbRun('INSERT INTO schema_migrations (version, appliedAt) VALUES (?, ?)',
+    [version, new Date().toISOString()]);
 }
 
 // Detect existing database version based on schema state
 function detectExistingVersion() {
   try {
     // Check projects.deletedAt column (v2 feature)
-    const projectColumns = db.prepare("PRAGMA table_info(projects)").all();
+    const projectColumns = dbAll("PRAGMA table_info(projects)");
     const hasDeletedAt = projectColumns.some(col => col.name === 'deletedAt');
 
     // Check tasks.notificationConfig column (v1 feature)
-    const taskColumns = db.prepare("PRAGMA table_info(tasks)").all();
+    const taskColumns = dbAll("PRAGMA table_info(tasks)");
     const hasNotificationConfig = taskColumns.some(col => col.name === 'notificationConfig');
 
     if (hasDeletedAt && hasNotificationConfig) return 2;
@@ -73,10 +118,10 @@ function runMigrations(targetVersion) {
 
   // Migration v1: Add notificationConfig column to tasks
   if (getDbVersion() < 1) {
-    const columns = db.prepare("PRAGMA table_info(tasks)").all();
+    const columns = dbAll("PRAGMA table_info(tasks)");
     const hasNotificationConfig = columns.some(col => col.name === 'notificationConfig');
     if (!hasNotificationConfig) {
-      db.exec("ALTER TABLE tasks ADD COLUMN notificationConfig TEXT DEFAULT '{\"enabled\":false,\"advanceMinutes\":60,\"repeatIntervalMinutes\":0}'");
+      dbExec("ALTER TABLE tasks ADD COLUMN notificationConfig TEXT DEFAULT '{\"enabled\":false,\"advanceMinutes\":60,\"repeatIntervalMinutes\":0}'");
       console.log('Migration v1: Added notificationConfig column to tasks table');
     }
     setDbVersion(1);
@@ -84,10 +129,10 @@ function runMigrations(targetVersion) {
 
   // Migration v2: Add deletedAt column to projects
   if (getDbVersion() < 2) {
-    const projectColumns = db.prepare("PRAGMA table_info(projects)").all();
+    const projectColumns = dbAll("PRAGMA table_info(projects)");
     const hasDeletedAt = projectColumns.some(col => col.name === 'deletedAt');
     if (!hasDeletedAt) {
-      db.exec("ALTER TABLE projects ADD COLUMN deletedAt TEXT");
+      dbExec("ALTER TABLE projects ADD COLUMN deletedAt TEXT");
       console.log('Migration v2: Added deletedAt column to projects table');
     }
     setDbVersion(2);
@@ -117,127 +162,147 @@ function createWindow() {
   }
 }
 
-function initDatabase() {
-  const userDataPath = app.getPath('userData');
-  const dbPath = path.join(userDataPath, 'plantap.db');
+async function initDatabase() {
+  try {
+    const initSqlJs = require('sql.js');
+    const SQL = await initSqlJs();
+    console.log('sql.js initialized');
 
-  db = new Database(dbPath);
-  console.log('Database initialized at:', dbPath);
+    const userDataPath = app.getPath('userData');
+    dbPath = path.join(userDataPath, 'plantap.db');
 
-  // Step 1: Create schema_migrations table first (for version tracking)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      version INTEGER PRIMARY KEY,
-      appliedAt TEXT NOT NULL
-    );
-  `);
+    console.log('Initializing database at:', dbPath);
 
-  // Step 2: Check current version
-  let currentVersion = getDbVersion();
-
-  // For databases without version tracking yet (-1), detect existing state first
-  if (currentVersion === -1) {
-    currentVersion = detectExistingVersion();
-    console.log(`Detected existing database version: ${currentVersion}`);
-    // Record the detected version as the baseline
-    if (currentVersion > 0) {
-      setDbVersion(currentVersion);
+    // Load existing database or create new one
+    if (fs.existsSync(dbPath)) {
+      console.log('Loading existing database...');
+      const fileBuffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(fileBuffer);
+    } else {
+      console.log('Creating new database...');
+      db = new SQL.Database();
     }
+
+    console.log('Database initialized successfully at:', dbPath);
+
+    dbExec(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version INTEGER PRIMARY KEY,
+        appliedAt TEXT NOT NULL
+      );
+    `);
+
+    // Step 2: Check current version
+    let currentVersion = getDbVersion();
+
+    // For databases without version tracking yet (-1), detect existing state first
+    if (currentVersion === -1) {
+      currentVersion = detectExistingVersion();
+      console.log(`Detected existing database version: ${currentVersion}`);
+      // Record the detected version as the baseline
+      if (currentVersion > 0) {
+        setDbVersion(currentVersion);
+      }
+    }
+
+    // Step 3: Create all tables first (using IF NOT EXISTS so existing tables are preserved)
+    dbExec(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL,
+        progress INTEGER DEFAULT 0,
+        deletedAt TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS phases (
+        id TEXT PRIMARY KEY,
+        projectId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL,
+        actualEndDate TEXT,
+        status TEXT DEFAULT 'todo',
+        FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS tasks (
+        id TEXT PRIMARY KEY,
+        phaseId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        assignee TEXT NOT NULL,
+        plannedHours REAL DEFAULT 0,
+        actualHours REAL DEFAULT 0,
+        dueDate TEXT NOT NULL,
+        status TEXT DEFAULT 'todo',
+        priority TEXT DEFAULT 'medium',
+        tags TEXT DEFAULT '[]',
+        notificationConfig TEXT DEFAULT '{"enabled":false,"advanceMinutes":60,"repeatIntervalMinutes":0}',
+        FOREIGN KEY (phaseId) REFERENCES phases(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS notification_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        settings TEXT DEFAULT '{"inApp":{"enabled":true},"system":{"enabled":true},"email":{"enabled":false,"smtpHost":"","smtpPort":587,"smtpUser":"","smtpPassword":"","fromEmail":""},"dingtalk":{"enabled":false,"webhookUrl":"","secret":""}}'
+      );
+
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        typeId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        read INTEGER DEFAULT 0,
+        createdAt TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS ai_config (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        config TEXT DEFAULT '{"enabled":false,"provider":{"type":"openai","name":"OpenAI","model":"gpt-4o"}}'
+      );
+
+      CREATE TABLE IF NOT EXISTS ai_messages (
+        id TEXT PRIMARY KEY,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+    `);
+
+    // Step 4: If upgrade needed, backup before migrating (must be AFTER tables are created)
+    if (currentVersion < CURRENT_SCHEMA_VERSION) {
+      console.log(`Database upgrade needed: v${currentVersion} -> v${CURRENT_SCHEMA_VERSION}`);
+      backupDatabase(dbPath);
+      runMigrations(CURRENT_SCHEMA_VERSION);
+    }
+
+    // Step 5: Auto-delete projects that have been in recycle bin for more than 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const expiredProjects = dbAll("SELECT id FROM projects WHERE deletedAt IS NOT NULL AND deletedAt < ?", [thirtyDaysAgo.toISOString()]);
+    for (const project of expiredProjects) {
+      dbRun('DELETE FROM tasks WHERE phaseId IN (SELECT id FROM phases WHERE projectId = ?)', [project.id]);
+      dbRun('DELETE FROM phases WHERE projectId = ?', [project.id]);
+      dbRun('DELETE FROM projects WHERE id = ?', [project.id]);
+      console.log('Auto-deleted expired project:', project.id);
+    }
+
+    // Step 6: Ensure default rows exist
+    dbRun("INSERT OR IGNORE INTO notification_settings (id, settings) VALUES (1, '{\"inApp\":{\"enabled\":true},\"system\":{\"enabled\":true},\"email\":{\"enabled\":false,\"smtpHost\":\"\",\"smtpPort\":587,\"smtpUser\":\"\",\"smtpPassword\":\"\",\"fromEmail\":\"\"},\"dingtalk\":{\"enabled\":false,\"webhookUrl\":\"\",\"secret\":\"\"}}')");
+    dbRun("INSERT OR IGNORE INTO ai_config (id, config) VALUES (1, '{\"enabled\":false,\"provider\":{\"type\":\"openai\",\"name\":\"OpenAI\",\"model\":\"gpt-4o\"}}')");
+
+    console.log('Database tables created');
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+    console.error('Error stack:', error.stack);
+    throw error;
   }
-
-  // Step 3: Create all tables first (using IF NOT EXISTS so existing tables are preserved)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      startDate TEXT NOT NULL,
-      endDate TEXT NOT NULL,
-      progress INTEGER DEFAULT 0,
-      deletedAt TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS phases (
-      id TEXT PRIMARY KEY,
-      projectId TEXT NOT NULL,
-      name TEXT NOT NULL,
-      startDate TEXT NOT NULL,
-      endDate TEXT NOT NULL,
-      actualEndDate TEXT,
-      status TEXT DEFAULT 'todo',
-      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS tasks (
-      id TEXT PRIMARY KEY,
-      phaseId TEXT NOT NULL,
-      name TEXT NOT NULL,
-      assignee TEXT NOT NULL,
-      plannedHours REAL DEFAULT 0,
-      actualHours REAL DEFAULT 0,
-      dueDate TEXT NOT NULL,
-      status TEXT DEFAULT 'todo',
-      priority TEXT DEFAULT 'medium',
-      tags TEXT DEFAULT '[]',
-      notificationConfig TEXT DEFAULT '{"enabled":false,"advanceMinutes":60,"repeatIntervalMinutes":0}',
-      FOREIGN KEY (phaseId) REFERENCES phases(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS notification_settings (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      settings TEXT DEFAULT '{"inApp":{"enabled":true},"system":{"enabled":true},"email":{"enabled":false,"smtpHost":"","smtpPort":587,"smtpUser":"","smtpPassword":"","fromEmail":""},"dingtalk":{"enabled":false,"webhookUrl":"","secret":""}}'
-    );
-
-    CREATE TABLE IF NOT EXISTS notifications (
-      id TEXT PRIMARY KEY,
-      type TEXT NOT NULL,
-      typeId TEXT NOT NULL,
-      title TEXT NOT NULL,
-      message TEXT NOT NULL,
-      read INTEGER DEFAULT 0,
-      createdAt TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS ai_config (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      config TEXT DEFAULT '{"enabled":false,"provider":{"type":"openai","name":"OpenAI","model":"gpt-4o"}}'
-    );
-
-    CREATE TABLE IF NOT EXISTS ai_messages (
-      id TEXT PRIMARY KEY,
-      role TEXT NOT NULL,
-      content TEXT NOT NULL,
-      createdAt TEXT NOT NULL
-    );
-  `);
-
-  // Step 4: If upgrade needed, backup before migrating (must be AFTER tables are created)
-  if (currentVersion < CURRENT_SCHEMA_VERSION) {
-    console.log(`Database upgrade needed: v${currentVersion} -> v${CURRENT_SCHEMA_VERSION}`);
-    backupDatabase(dbPath);
-    runMigrations(CURRENT_SCHEMA_VERSION);
-  }
-
-  // Step 5: Auto-delete projects that have been in recycle bin for more than 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const expiredProjects = db.prepare("SELECT id FROM projects WHERE deletedAt IS NOT NULL AND deletedAt < ?").all(thirtyDaysAgo.toISOString());
-  for (const project of expiredProjects) {
-    db.prepare('DELETE FROM tasks WHERE phaseId IN (SELECT id FROM phases WHERE projectId = ?)').run(project.id);
-    db.prepare('DELETE FROM phases WHERE projectId = ?').run(project.id);
-    db.prepare('DELETE FROM projects WHERE id = ?').run(project.id);
-    console.log('Auto-deleted expired project:', project.id);
-  }
-
-  // Step 6: Ensure default rows exist
-  db.exec("INSERT OR IGNORE INTO notification_settings (id, settings) VALUES (1, '{\"inApp\":{\"enabled\":true},\"system\":{\"enabled\":true},\"email\":{\"enabled\":false,\"smtpHost\":\"\",\"smtpPort\":587,\"smtpUser\":\"\",\"smtpPassword\":\"\",\"fromEmail\":\"\"},\"dingtalk\":{\"enabled\":false,\"webhookUrl\":\"\",\"secret\":\"\"}}')");
-  db.exec("INSERT OR IGNORE INTO ai_config (id, config) VALUES (1, '{\"enabled\":false,\"provider\":{\"type\":\"openai\",\"name\":\"OpenAI\",\"model\":\"gpt-4o\"}}')");
-
-  console.log('Database tables created');
 }
 
 // Get notification settings
 function getNotificationSettings() {
-  const row = db.prepare('SELECT settings FROM notification_settings WHERE id = 1').get();
+  const row = dbGet('SELECT settings FROM notification_settings WHERE id = 1');
   return JSON.parse(row.settings);
 }
 
@@ -252,9 +317,10 @@ function shouldNotify(type, typeId, lastNotifiedMap, repeatIntervalMinutes) {
   }
 
   // Check database to avoid duplicate notifications after restart
-  const existing = db.prepare(
-    "SELECT createdAt FROM notifications WHERE type = ? AND typeId = ? ORDER BY createdAt DESC LIMIT 1"
-  ).get(type, typeId);
+  const existing = dbGet(
+    "SELECT createdAt FROM notifications WHERE type = ? AND typeId = ? ORDER BY createdAt DESC LIMIT 1",
+    [type, typeId]
+  );
 
   if (existing) {
     const lastTime = new Date(existing.createdAt).getTime();
@@ -274,10 +340,10 @@ function shouldNotify(type, typeId, lastNotifiedMap, repeatIntervalMinutes) {
 
 // Send in-app notification
 function sendInAppNotification(notification) {
-  db.prepare(`
+  dbRun(`
     INSERT INTO notifications (id, type, typeId, title, message, read, createdAt)
     VALUES (?, ?, ?, ?, ?, 0, ?)
-  `).run(notification.id, notification.type, notification.typeId, notification.title, notification.message, notification.createdAt);
+  `, [notification.id, notification.type, notification.typeId, notification.title, notification.message, notification.createdAt]);
 
   // Send to renderer if window exists
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -362,8 +428,8 @@ function checkNotifications() {
   const now = new Date();
 
   // Get all tasks that are not done
-  const tasks = db.prepare('SELECT * FROM tasks WHERE status != ?').all('done');
-  const phases = db.prepare('SELECT p.*, pr.name as projectName FROM phases p LEFT JOIN projects pr ON p.projectId = pr.id WHERE p.status != ?').all('done');
+  const tasks = dbAll('SELECT * FROM tasks WHERE status != ?', ['done']);
+  const phases = dbAll('SELECT p.*, pr.name as projectName FROM phases p LEFT JOIN projects pr ON p.projectId = pr.id WHERE p.status != ?', ['done']);
 
   // Check tasks
   for (const task of tasks) {
@@ -450,14 +516,14 @@ function startNotificationChecker() {
 
 // IPC Handlers for Projects
 ipcMain.handle('db:projects:getAll', () => {
-  return db.prepare('SELECT * FROM projects WHERE deletedAt IS NULL ORDER BY startDate DESC').all();
+  return dbAll('SELECT * FROM projects WHERE deletedAt IS NULL ORDER BY startDate DESC');
 });
 
 // Batch query: get all data in one request (for fast startup)
 ipcMain.handle('db:getAllData', () => {
-  const projects = db.prepare('SELECT * FROM projects WHERE deletedAt IS NULL ORDER BY startDate DESC').all();
-  const phases = db.prepare('SELECT * FROM phases ORDER BY startDate').all();
-  const tasks = db.prepare('SELECT * FROM tasks ORDER BY dueDate').all();
+  const projects = dbAll('SELECT * FROM projects WHERE deletedAt IS NULL ORDER BY startDate DESC');
+  const phases = dbAll('SELECT * FROM phases ORDER BY startDate');
+  const tasks = dbAll('SELECT * FROM tasks ORDER BY dueDate');
 
   // Parse JSON fields for tasks
   const parsedTasks = tasks.map(t => ({
@@ -470,58 +536,56 @@ ipcMain.handle('db:getAllData', () => {
 });
 
 ipcMain.handle('db:projects:add', (_, project) => {
-  const stmt = db.prepare(`
+  dbRun(`
     INSERT INTO projects (id, name, startDate, endDate, progress, deletedAt)
     VALUES (?, ?, ?, ?, ?, NULL)
-  `);
-  stmt.run(project.id, project.name, project.startDate, project.endDate, project.progress);
+  `, [project.id, project.name, project.startDate, project.endDate, project.progress]);
   return project;
 });
 
 ipcMain.handle('db:projects:update', (_, id, updates) => {
   const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
   const values = Object.values(updates);
-  const stmt = db.prepare(`UPDATE projects SET ${fields} WHERE id = ?`);
-  stmt.run(...values, id);
+  dbRun(`UPDATE projects SET ${fields} WHERE id = ?`, [...values, id]);
   return { id, ...updates };
 });
 
 // Soft delete - move to recycle bin
 ipcMain.handle('db:projects:softDelete', (_, id) => {
   const now = new Date().toISOString();
-  db.prepare('UPDATE projects SET deletedAt = ? WHERE id = ?').run(now, id);
+  dbRun('UPDATE projects SET deletedAt = ? WHERE id = ?', [now, id]);
   return true;
 });
 
 // Restore from recycle bin
 ipcMain.handle('db:projects:restore', (_, id) => {
-  db.prepare('UPDATE projects SET deletedAt = NULL WHERE id = ?').run(id);
+  dbRun('UPDATE projects SET deletedAt = NULL WHERE id = ?', [id]);
   return true;
 });
 
 // Permanently delete from recycle bin
 ipcMain.handle('db:projects:permanentDelete', (_, id) => {
-  const phases = db.prepare('SELECT id FROM phases WHERE projectId = ?').all(id);
+  const phases = dbAll('SELECT id FROM phases WHERE projectId = ?', [id]);
   phases.forEach(phase => {
-    db.prepare('DELETE FROM tasks WHERE phaseId = ?').run(phase.id);
+    dbRun('DELETE FROM tasks WHERE phaseId = ?', [phase.id]);
   });
-  db.prepare('DELETE FROM phases WHERE projectId = ?').run(id);
-  db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+  dbRun('DELETE FROM phases WHERE projectId = ?', [id]);
+  dbRun('DELETE FROM projects WHERE id = ?', [id]);
   return true;
 });
 
 // Get recycle bin projects
 ipcMain.handle('db:projects:getRecycleBin', () => {
-  return db.prepare('SELECT * FROM projects WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC').all();
+  return dbAll('SELECT * FROM projects WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC');
 });
 
 // Empty recycle bin (delete all)
 ipcMain.handle('db:projects:emptyRecycleBin', () => {
-  const deletedProjects = db.prepare('SELECT id FROM projects WHERE deletedAt IS NOT NULL').all();
+  const deletedProjects = dbAll('SELECT id FROM projects WHERE deletedAt IS NOT NULL');
   for (const project of deletedProjects) {
-    db.prepare('DELETE FROM tasks WHERE phaseId IN (SELECT id FROM phases WHERE projectId = ?)').run(project.id);
-    db.prepare('DELETE FROM phases WHERE projectId = ?').run(project.id);
-    db.prepare('DELETE FROM projects WHERE id = ?').run(project.id);
+    dbRun('DELETE FROM tasks WHERE phaseId IN (SELECT id FROM phases WHERE projectId = ?)', [project.id]);
+    dbRun('DELETE FROM phases WHERE projectId = ?', [project.id]);
+    dbRun('DELETE FROM projects WHERE id = ?', [project.id]);
   }
   return true;
 });
@@ -529,41 +593,39 @@ ipcMain.handle('db:projects:emptyRecycleBin', () => {
 // Legacy hard delete (for backwards compatibility, now does soft delete)
 ipcMain.handle('db:projects:delete', (_, id) => {
   const now = new Date().toISOString();
-  db.prepare('UPDATE projects SET deletedAt = ? WHERE id = ?').run(now, id);
+  dbRun('UPDATE projects SET deletedAt = ? WHERE id = ?', [now, id]);
   return true;
 });
 
 // IPC Handlers for Phases
 ipcMain.handle('db:phases:getByProject', (_, projectId) => {
-  return db.prepare('SELECT * FROM phases WHERE projectId = ? ORDER BY startDate').all(projectId);
+  return dbAll('SELECT * FROM phases WHERE projectId = ? ORDER BY startDate', [projectId]);
 });
 
 ipcMain.handle('db:phases:add', (_, phase) => {
-  const stmt = db.prepare(`
+  dbRun(`
     INSERT INTO phases (id, projectId, name, startDate, endDate, actualEndDate, status)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  stmt.run(phase.id, phase.projectId, phase.name, phase.startDate, phase.endDate, phase.actualEndDate || null, phase.status);
+  `, [phase.id, phase.projectId, phase.name, phase.startDate, phase.endDate, phase.actualEndDate || null, phase.status]);
   return phase;
 });
 
 ipcMain.handle('db:phases:update', (_, id, updates) => {
   const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
   const values = Object.values(updates);
-  const stmt = db.prepare(`UPDATE phases SET ${fields} WHERE id = ?`);
-  stmt.run(...values, id);
+  dbRun(`UPDATE phases SET ${fields} WHERE id = ?`, [...values, id]);
   return { id, ...updates };
 });
 
 ipcMain.handle('db:phases:delete', (_, id) => {
-  db.prepare('DELETE FROM tasks WHERE phaseId = ?').run(id);
-  db.prepare('DELETE FROM phases WHERE id = ?').run(id);
+  dbRun('DELETE FROM tasks WHERE phaseId = ?', [id]);
+  dbRun('DELETE FROM phases WHERE id = ?', [id]);
   return true;
 });
 
 // IPC Handlers for Tasks
 ipcMain.handle('db:tasks:getByPhase', (_, phaseId) => {
-  const tasks = db.prepare('SELECT * FROM tasks WHERE phaseId = ? ORDER BY dueDate').all(phaseId);
+  const tasks = dbAll('SELECT * FROM tasks WHERE phaseId = ? ORDER BY dueDate', [phaseId]);
   return tasks.map(t => ({
     ...t,
     tags: JSON.parse(t.tags || '[]'),
@@ -573,15 +635,14 @@ ipcMain.handle('db:tasks:getByPhase', (_, phaseId) => {
 
 ipcMain.handle('db:tasks:add', (_, task) => {
   const notificationConfig = JSON.stringify(task.notificationConfig || { enabled: false, advanceMinutes: 60, repeatIntervalMinutes: 0 });
-  const stmt = db.prepare(`
+  dbRun(`
     INSERT INTO tasks (id, phaseId, name, assignee, plannedHours, actualHours, dueDate, status, priority, tags, notificationConfig)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  stmt.run(
+  `, [
     task.id, task.phaseId, task.name, task.assignee,
     task.plannedHours, task.actualHours, task.dueDate,
     task.status, task.priority, JSON.stringify(task.tags || []), notificationConfig
-  );
+  ]);
   return task;
 });
 
@@ -595,13 +656,12 @@ ipcMain.handle('db:tasks:update', (_, id, updates) => {
   }
   const fields = Object.keys(finalUpdates).map(k => `${k} = ?`).join(', ');
   const values = Object.values(finalUpdates);
-  const stmt = db.prepare(`UPDATE tasks SET ${fields} WHERE id = ?`);
-  stmt.run(...values, id);
+  dbRun(`UPDATE tasks SET ${fields} WHERE id = ?`, [...values, id]);
   return { id, ...updates };
 });
 
 ipcMain.handle('db:tasks:delete', (_, id) => {
-  db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+  dbRun('DELETE FROM tasks WHERE id = ?', [id]);
   return true;
 });
 
@@ -611,27 +671,27 @@ ipcMain.handle('notification:settings:get', () => {
 });
 
 ipcMain.handle('notification:settings:update', (_, settings) => {
-  db.prepare('UPDATE notification_settings SET settings = ? WHERE id = 1').run(JSON.stringify(settings));
+  dbRun('UPDATE notification_settings SET settings = ? WHERE id = 1', [JSON.stringify(settings)]);
   return settings;
 });
 
 // IPC Handlers for In-App Notifications
 ipcMain.handle('notification:inapp:getAll', () => {
-  return db.prepare('SELECT * FROM notifications ORDER BY createdAt DESC LIMIT 50').all();
+  return dbAll('SELECT * FROM notifications ORDER BY createdAt DESC LIMIT 50');
 });
 
 ipcMain.handle('notification:inapp:markRead', (_, id) => {
-  db.prepare('UPDATE notifications SET read = 1 WHERE id = ?').run(id);
+  dbRun('UPDATE notifications SET read = 1 WHERE id = ?', [id]);
   return true;
 });
 
 ipcMain.handle('notification:inapp:markAllRead', () => {
-  db.prepare('UPDATE notifications SET read = 1').run();
+  dbRun('UPDATE notifications SET read = 1');
   return true;
 });
 
 ipcMain.handle('notification:inapp:clear', () => {
-  db.prepare('DELETE FROM notifications').run();
+  dbRun('DELETE FROM notifications');
   return true;
 });
 
@@ -822,7 +882,7 @@ ID: project-xxx
 
 // Get AI config from database
 function getAIConfig() {
-  const row = db.prepare('SELECT config FROM ai_config WHERE id = 1').get();
+  const row = dbGet('SELECT config FROM ai_config WHERE id = 1');
   return JSON.parse(row.config);
 }
 
@@ -1025,29 +1085,25 @@ ipcMain.handle('ai:config:get', () => {
 
 // IPC: Update AI Config
 ipcMain.handle('ai:config:update', (_, config) => {
-  db.prepare('UPDATE ai_config SET config = ? WHERE id = 1').run(JSON.stringify(config));
+  dbRun('UPDATE ai_config SET config = ? WHERE id = 1', [JSON.stringify(config)]);
   return config;
 });
 
 // IPC: Get AI Messages
 ipcMain.handle('ai:messages:getAll', () => {
-  return db.prepare('SELECT id, role, content, createdAt as timestamp FROM ai_messages ORDER BY createdAt ASC').all();
+  return dbAll('SELECT id, role, content, createdAt as timestamp FROM ai_messages ORDER BY createdAt ASC');
 });
 
 // IPC: Save AI Message
 ipcMain.handle('ai:messages:add', (_, message) => {
-  db.prepare('INSERT INTO ai_messages (id, role, content, createdAt) VALUES (?, ?, ?, ?)').run(
-    message.id,
-    message.role,
-    message.content,
-    message.timestamp
-  );
+  dbRun('INSERT INTO ai_messages (id, role, content, createdAt) VALUES (?, ?, ?, ?)',
+    [message.id, message.role, message.content, message.timestamp]);
   return message;
 });
 
 // IPC: Clear AI Messages
 ipcMain.handle('ai:messages:clear', () => {
-  db.prepare('DELETE FROM ai_messages').run();
+  dbRun('DELETE FROM ai_messages');
   return true;
 });
 
@@ -1078,7 +1134,7 @@ ipcMain.handle('ai:executeAction', (_, action) => {
         if (target === 'project') {
           // Check for duplicate project name
           const projectName = data.name;
-          const existing = db.prepare('SELECT * FROM projects WHERE name = ? AND deletedAt IS NULL').get(projectName);
+          const existing = dbGet('SELECT * FROM projects WHERE name = ? AND deletedAt IS NULL', [projectName]);
 
           if (existing) {
             return {
@@ -1095,10 +1151,10 @@ ipcMain.handle('ai:executeAction', (_, action) => {
           delete project.phases;
           delete project.tasks;
 
-          db.prepare(`
+          dbRun(`
             INSERT INTO projects (id, name, startDate, endDate, progress, deletedAt)
             VALUES (?, ?, ?, ?, ?, NULL)
-          `).run(project.id, project.name, project.startDate, project.endDate, project.progress || 0);
+          `, [project.id, project.name, project.startDate, project.endDate, project.progress || 0]);
 
           // Handle nested phases and tasks if present
           if (data.phases && Array.isArray(data.phases)) {
@@ -1107,10 +1163,10 @@ ipcMain.handle('ai:executeAction', (_, action) => {
               const phase = { ...phaseData, id: phaseId, projectId: projectId };
               delete phase.tasks; // Remove nested tasks from phase
 
-              db.prepare(`
+              dbRun(`
                 INSERT INTO phases (id, projectId, name, startDate, endDate, actualEndDate, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-              `).run(phase.id, phase.projectId, phase.name, phase.startDate, phase.endDate, phase.actualEndDate || null, phase.status || 'todo');
+              `, [phase.id, phase.projectId, phase.name, phase.startDate, phase.endDate, phase.actualEndDate || null, phase.status || 'todo']);
 
               // Handle nested tasks within phase
               if (phaseData.tasks && Array.isArray(phaseData.tasks)) {
@@ -1118,14 +1174,14 @@ ipcMain.handle('ai:executeAction', (_, action) => {
                   const task = { ...taskData, id: taskData.id || `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, phaseId: phaseId };
                   const notificationConfig = JSON.stringify(task.notificationConfig || { enabled: false, advanceMinutes: 60, repeatIntervalMinutes: 0 });
 
-                  db.prepare(`
+                  dbRun(`
                     INSERT INTO tasks (id, phaseId, name, assignee, plannedHours, actualHours, dueDate, status, priority, tags, notificationConfig)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  `).run(
+                  `, [
                     task.id, task.phaseId, task.name, task.assignee,
                     task.plannedHours || 0, task.actualHours || 0, task.dueDate,
                     task.status || 'todo', task.priority || 'medium', JSON.stringify(task.tags || []), notificationConfig
-                  );
+                  ]);
                 }
               }
             }
@@ -1135,23 +1191,23 @@ ipcMain.handle('ai:executeAction', (_, action) => {
         }
         if (target === 'phase') {
           const phase = { ...data, id: `phase-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
-          db.prepare(`
+          dbRun(`
             INSERT INTO phases (id, projectId, name, startDate, endDate, actualEndDate, status)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-          `).run(phase.id, phase.projectId, phase.name, phase.startDate, phase.endDate, phase.actualEndDate || null, phase.status || 'todo');
+          `, [phase.id, phase.projectId, phase.name, phase.startDate, phase.endDate, phase.actualEndDate || null, phase.status || 'todo']);
           return { success: true, data: phase };
         }
         if (target === 'task') {
           const task = { ...data, id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
           const notificationConfig = JSON.stringify(task.notificationConfig || { enabled: false, advanceMinutes: 60, repeatIntervalMinutes: 0 });
-          db.prepare(`
+          dbRun(`
             INSERT INTO tasks (id, phaseId, name, assignee, plannedHours, actualHours, dueDate, status, priority, tags, notificationConfig)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(
+          `, [
             task.id, task.phaseId, task.name, task.assignee,
             task.plannedHours || 0, task.actualHours || 0, task.dueDate,
             task.status || 'todo', task.priority || 'medium', JSON.stringify(task.tags || []), notificationConfig
-          );
+          ]);
           return { success: true, data: task };
         }
         break;
@@ -1160,13 +1216,13 @@ ipcMain.handle('ai:executeAction', (_, action) => {
         if (target === 'project') {
           const projectFields = Object.keys(data).map(k => `${k} = ?`).join(', ');
           const projectValues = Object.values(data);
-          db.prepare(`UPDATE projects SET ${projectFields} WHERE id = ?`).run(...projectValues, id);
+          dbRun(`UPDATE projects SET ${projectFields} WHERE id = ?`, [...projectValues, id]);
           return { success: true, data: { id, ...data } };
         }
         if (target === 'phase') {
           const phaseFields = Object.keys(data).map(k => `${k} = ?`).join(', ');
           const phaseValues = Object.values(data);
-          db.prepare(`UPDATE phases SET ${phaseFields} WHERE id = ?`).run(...phaseValues, id);
+          dbRun(`UPDATE phases SET ${phaseFields} WHERE id = ?`, [...phaseValues, id]);
           return { success: true, data: { id, ...data } };
         }
         if (target === 'task') {
@@ -1175,7 +1231,7 @@ ipcMain.handle('ai:executeAction', (_, action) => {
           if (finalData.notificationConfig) finalData.notificationConfig = JSON.stringify(finalData.notificationConfig);
           const taskFields = Object.keys(finalData).map(k => `${k} = ?`).join(', ');
           const taskValues = Object.values(finalData);
-          db.prepare(`UPDATE tasks SET ${taskFields} WHERE id = ?`).run(...taskValues, id);
+          dbRun(`UPDATE tasks SET ${taskFields} WHERE id = ?`, [...taskValues, id]);
           return { success: true, data: { id, ...data } };
         }
         break;
@@ -1183,16 +1239,16 @@ ipcMain.handle('ai:executeAction', (_, action) => {
       case 'delete':
         if (target === 'project') {
           const now = new Date().toISOString();
-          db.prepare('UPDATE projects SET deletedAt = ? WHERE id = ?').run(now, id);
+          dbRun('UPDATE projects SET deletedAt = ? WHERE id = ?', [now, id]);
           return { success: true };
         }
         if (target === 'phase') {
-          db.prepare('DELETE FROM tasks WHERE phaseId = ?').run(id);
-          db.prepare('DELETE FROM phases WHERE id = ?').run(id);
+          dbRun('DELETE FROM tasks WHERE phaseId = ?', [id]);
+          dbRun('DELETE FROM phases WHERE id = ?', [id]);
           return { success: true };
         }
         if (target === 'task') {
-          db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+          dbRun('DELETE FROM tasks WHERE id = ?', [id]);
           return { success: true };
         }
         break;
@@ -1205,10 +1261,18 @@ ipcMain.handle('ai:executeAction', (_, action) => {
   }
 });
 
-app.whenReady().then(() => {
-  initDatabase();
-  createWindow();
-  startNotificationChecker();
+app.whenReady().then(async () => {
+  try {
+    console.log('App ready, initializing...');
+    await initDatabase();
+    console.log('Database initialized successfully');
+    createWindow();
+    startNotificationChecker();
+    console.log('App initialization complete');
+  } catch (error) {
+    console.error('Failed to initialize app:', error);
+    console.error('Error stack:', error.stack);
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -1216,6 +1280,7 @@ app.on('window-all-closed', () => {
     clearInterval(notificationInterval);
   }
   if (db) {
+    saveDatabase();
     db.close();
   }
   if (process.platform !== 'darwin') {

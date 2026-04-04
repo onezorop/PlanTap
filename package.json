@@ -15,7 +15,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "better-sqlite3": "^9.6.0",
     "concurrently": "^8.2.2",
     "frappe-gantt": "^0.6.1",
     "i18next": "^26.0.3",
@@ -23,6 +22,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-i18next": "^17.0.2",
+    "sql.js": "^1.14.1",
     "wait-on": "^7.2.0",
     "zustand": "^4.5.2"
   },
@@ -30,10 +30,11 @@
     "@electron/rebuild": "^4.0.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "cross-env": "^7.0.3",
-    "electron": "^28.3.3",
+    "electron": "28.3.3",
     "electron-builder": "^24.13.3",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
@@ -51,6 +52,7 @@
       "dist/**/*",
       "electron/**/*"
     ],
+    "asar": true,
     "mac": {
       "target": "dmg",
       "icon": "public/icon.icns"
