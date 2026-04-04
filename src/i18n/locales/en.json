@@ -1,0 +1,178 @@
+{
+  "app": {
+    "name": "PlanTap",
+    "loading": "Loading..."
+  },
+  "sidebar": {
+    "projects": "Projects",
+    "noProjects": "No projects",
+    "createFirst": "Create your first project",
+    "import": "Import",
+    "newProject": "New Project"
+  },
+  "header": {
+    "listView": "List",
+    "ganttView": "Gantt",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "recycleBin": "Recycle Bin",
+    "theme": "Theme",
+    "language": "Language"
+  },
+  "project": {
+    "name": "Project Name",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "progress": "Progress",
+    "create": "Create Project",
+    "edit": "Edit Project",
+    "delete": "Delete Project",
+    "deleteConfirm": "Are you sure you want to delete this project? All related phases and tasks will be deleted.",
+    "new": "New Project",
+    "editProject": "Edit Project"
+  },
+  "phase": {
+    "name": "Phase Name",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "status": "Status",
+    "create": "Add Phase",
+    "edit": "Edit Phase",
+    "delete": "Delete Phase",
+    "deleteConfirm": "Are you sure you want to delete this phase? All related tasks will be deleted.",
+    "todo": "To Do",
+    "doing": "In Progress",
+    "done": "Done",
+    "new": "Add Phase",
+    "editPhase": "Edit Phase",
+    "empty": "No phases yet, click above to add",
+    "list": "Phase List"
+  },
+  "task": {
+    "name": "Task Name",
+    "assignee": "Assignee",
+    "plannedHours": "Planned",
+    "actualHours": "Actual",
+    "dueDate": "Due Date",
+    "status": "Status",
+    "priority": "Priority",
+    "tags": "Tags",
+    "create": "Add Task",
+    "edit": "Edit Task",
+    "delete": "Delete Task",
+    "deleteConfirm": "Are you sure you want to delete this task?",
+    "todo": "To Do",
+    "doing": "In Progress",
+    "done": "Done",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "new": "New Task",
+    "editTask": "Edit Task",
+    "empty": "No tasks",
+    "list": "Task List",
+    "addTag": "Add Tag"
+  },
+  "import": {
+    "title": "Import Projects",
+    "selectFile": "Select File",
+    "importing": "Importing...",
+    "format": "Supports JSON and Excel (.xlsx, .xls) formats",
+    "dataFormat": "Data Format:"
+  },
+  "export": {
+    "title": "Export Projects",
+    "success": "Export successful",
+    "error": "Export failed",
+    "format": "Format",
+    "selectProjects": "Select Projects to Export",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "projectsSelected": "projects selected",
+    "exporting": "Exporting...",
+    "export": "Export"
+  },
+  "duplicate": {
+    "projectNameExists": "A project with the name '{name}' already exists",
+    "projectNameExistsHint": "Do you want to create anyway, update the existing project, or cancel?",
+    "createAnyway": "Create Anyway",
+    "updateExisting": "Update Existing",
+    "cancel": "Cancel"
+  },
+  "notification": {
+    "title": "Notifications",
+    "markAllRead": "Mark All Read",
+    "clear": "Clear All",
+    "noNotifications": "No notifications",
+    "taskReminder": "Task Due Reminder",
+    "phaseReminder": "Phase Due Reminder",
+    "settings": "Notification Settings",
+    "inApp": "In-App",
+    "email": "Email",
+    "dingtalk": "DingTalk",
+    "test": "Test Notification",
+    "testDingtalk": "Test DingTalk",
+    "advance": "Advance",
+    "disabled": "Disabled"
+  },
+  "recycleBin": {
+    "title": "Recycle Bin",
+    "empty": "Recycle bin is empty",
+    "restore": "Restore",
+    "delete": "Delete Permanently",
+    "deleteConfirm": "Are you sure you want to permanently delete? This action cannot be undone.",
+    "deletedAt": "Deleted At",
+    "expiresAt": "Expires At",
+    "autoDelete": "Will be automatically deleted after 30 days"
+  },
+  "theme": {
+    "title": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "title": "Language",
+    "zh": "简体中文",
+    "en": "English",
+    "fr": "Français",
+    "ja": "日本語"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "confirm": "Confirm",
+    "search": "Search",
+    "noData": "No data",
+    "setup": "Setup"
+  },
+  "main": {
+    "selectProject": "Select a project from the sidebar",
+    "orCreateNew": "or create a new project to get started"
+  },
+  "gantt": {
+    "title": "Gantt View",
+    "noProject": "No project data",
+    "hint": "Create a project in the sidebar to view the Gantt chart"
+  },
+  "ai": {
+    "title": "AI Assistant",
+    "welcome": "Ask me about your projects",
+    "welcomeHint": "I can help analyze progress, identify risks, and send DingTalk notifications",
+    "thinking": "Thinking...",
+    "inputPlaceholder": "Type a question...",
+    "newSession": "New Session",
+    "notEnabled": "AI is not enabled. Please configure in Settings",
+    "confirmTitle": "Confirm DingTalk Notification",
+    "confirmSubtitle": "AI Assistant wants to send the following notification",
+    "confirmSend": "Confirm",
+    "confirmActionTitle": "Confirm Action",
+    "confirmActionSubtitle": "AI Assistant wants to execute the following operation",
+    "confirm": "Confirm",
+    "attachImage": "Attach image"
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "app": {
+    "name": "プロジェクト管理",
+    "loading": "読み込み中..."
+  },
+  "sidebar": {
+    "projects": "プロジェクト",
+    "noProjects": "プロジェクトがありません",
+    "createFirst": "最初のプロジェクトを作成",
+    "import": "インポート",
+    "newProject": "新規プロジェクト"
+  },
+  "header": {
+    "listView": "リスト",
+    "ganttView": "ガンチャート",
+    "settings": "設定",
+    "notifications": "通知",
+    "recycleBin": "ゴミ箱",
+    "theme": "テーマ",
+    "language": "言語"
+  },
+  "project": {
+    "name": "プロジェクト名",
+    "startDate": "開始日",
+    "endDate": "終了日",
+    "progress": "進捗",
+    "create": "プロジェクト作成",
+    "edit": "プロジェクト編集",
+    "delete": "プロジェクト削除",
+    "deleteConfirm": "このプロジェクトを削除しますか？関連するすべてのフェーズとタスクが削除されます。",
+    "new": "新規プロジェクト",
+    "editProject": "プロジェクト編集"
+  },
+  "phase": {
+    "name": "フェーズ名",
+    "startDate": "開始日",
+    "endDate": "終了日",
+    "status": "ステータス",
+    "create": "フェーズ追加",
+    "edit": "フェーズ編集",
+    "delete": "フェーズ削除",
+    "deleteConfirm": "このフェーズを削除しますか？関連するすべてのタスクが削除されます。",
+    "todo": "未着手",
+    "doing": "進行中",
+    "done": "完了",
+    "new": "フェーズ追加",
+    "editPhase": "フェーズ編集"
+  },
+  "task": {
+    "name": "タスク名",
+    "assignee": "担当者",
+    "plannedHours": "予定時間",
+    "actualHours": "実績時間",
+    "dueDate": "期限日",
+    "status": "ステータス",
+    "priority": "優先度",
+    "tags": "タグ",
+    "create": "タスク追加",
+    "edit": "タスク編集",
+    "delete": "タスク削除",
+    "deleteConfirm": "このタスクを削除しますか？",
+    "todo": "未着手",
+    "doing": "進行中",
+    "done": "完了",
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "new": "新規タスク",
+    "editTask": "タスク編集"
+  },
+  "import": {
+    "title": "プロジェクトインポート",
+    "selectFile": "ファイル選択",
+    "importing": "インポート中...",
+    "format": "JSON形式とExcel形式（.xlsx、.xls）に対応",
+    "dataFormat": "データ形式："
+  },
+  "export": {
+    "title": "プロジェクトエクスポート",
+    "success": "エクスポート成功",
+    "error": "エクスポート失敗",
+    "format": "フォーマット",
+    "selectProjects": "エクスポートするプロジェクトを選択",
+    "selectAll": "すべて選択",
+    "deselectAll": "すべて解除",
+    "projectsSelected": "件のプロジェクトを選択",
+    "exporting": "エクスポート中...",
+    "export": "エクスポート"
+  },
+  "duplicate": {
+    "projectNameExists": "「{name}」という名前のプロジェクトは既に存在します",
+    "projectNameExistsHint": "それでも作成しますか、既存プロジェクトを更新するか、取り消しますか？",
+    "createAnyway": "それでも作成",
+    "updateExisting": "既存プロジェクトを更新",
+    "cancel": "キャンセル"
+  },
+  "notification": {
+    "title": "通知",
+    "markAllRead": "すべて既読にする",
+    "clear": "すべて削除",
+    "noNotifications": "通知はありません",
+    "taskReminder": "タスク期限リマインダー",
+    "phaseReminder": "フェーズ期限リマインダー",
+    "settings": "通知設定",
+    "inApp": "アプリ内",
+    "email": "メール",
+    "dingtalk": " DingTalk",
+    "test": "通知テスト",
+    "testDingtalk": "DingTalkテスト"
+  },
+  "recycleBin": {
+    "title": "ゴミ箱",
+    "empty": "ゴミ箱は空です",
+    "restore": "復元",
+    "delete": "完全削除",
+    "deleteConfirm": "完全に削除しますか？この操作は取り消せません。",
+    "deletedAt": "削除日時",
+    "expiresAt": "期限",
+    "autoDelete": "30日後に自動削除されます"
+  },
+  "theme": {
+    "title": "テーマ",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "language": {
+    "title": "言語",
+    "zh": "简体中文",
+    "en": "English",
+    "fr": "Français",
+    "ja": "日本語"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "close": "閉じる",
+    "confirm": "確認",
+    "search": "検索",
+    "noData": "データがありません"
+  },
+  "gantt": {
+    "title": "ガンチャート",
+    "noProject": "プロジェクトデータがありません",
+    "hint": "サイドバーでプロジェクトを作成するとガンチャートが表示されます"
+  },
+  "ai": {
+    "title": "AIアシスタント",
+    "welcome": "こんにちは！有何为您效劳？",
+    "welcomeHint": "プロジェクトの分析や通知の作成をお手伝いできます",
+    "inputPlaceholder": "メッセージを入力...",
+    "thinking": "思考中...",
+    "notEnabled": "AIが有効になっていません。設定で設定してください",
+    "newSession": "新規セッション",
+    "confirmTitle": "钉钉通知の確認",
+    "confirmSubtitle": "AIアシスタントが以下の通知を送信しようとしています",
+    "confirmSend": "確認",
+    "confirmActionTitle": "操作の確認",
+    "confirmActionSubtitle": "AIアシスタントが以下の操作を実行しようとしています",
+    "confirm": "確認",
+    "attachImage": "画像を追加"
+  }
+}

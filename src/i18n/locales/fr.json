@@ -1,0 +1,166 @@
+{
+  "app": {
+    "name": "Gestion de Projets",
+    "loading": "Chargement..."
+  },
+  "sidebar": {
+    "projects": "Projets",
+    "noProjects": "Aucun projet",
+    "createFirst": "Créer votre premier projet",
+    "import": "Importer",
+    "newProject": "Nouveau Projet"
+  },
+  "header": {
+    "listView": "Liste",
+    "ganttView": "Gantt",
+    "settings": "Paramètres",
+    "notifications": "Notifications",
+    "recycleBin": "Corbeille",
+    "theme": "Thème",
+    "language": "Langue"
+  },
+  "project": {
+    "name": "Nom du Projet",
+    "startDate": "Date de Début",
+    "endDate": "Date de Fin",
+    "progress": "Progression",
+    "create": "Créer un Projet",
+    "edit": "Modifier le Projet",
+    "delete": "Supprimer le Projet",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce projet? Toutes les phases et tâches associées seront supprimées.",
+    "new": "Nouveau Projet",
+    "editProject": "Modifier le Projet"
+  },
+  "phase": {
+    "name": "Nom de la Phase",
+    "startDate": "Date de Début",
+    "endDate": "Date de Fin",
+    "status": "Statut",
+    "create": "Ajouter une Phase",
+    "edit": "Modifier la Phase",
+    "delete": "Supprimer la Phase",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette phase? Toutes les tâches associées seront supprimées.",
+    "todo": "À Faire",
+    "doing": "En Cours",
+    "done": "Terminé",
+    "new": "Ajouter une Phase",
+    "editPhase": "Modifier la Phase"
+  },
+  "task": {
+    "name": "Nom de la Tâche",
+    "assignee": "Assigné à",
+    "plannedHours": "Heures Prévues",
+    "actualHours": "Heures Réelles",
+    "dueDate": "Date d'Échéance",
+    "status": "Statut",
+    "priority": "Priorité",
+    "tags": "Tags",
+    "create": "Ajouter une Tâche",
+    "edit": "Modifier la Tâche",
+    "delete": "Supprimer la Tâche",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette tâche?",
+    "todo": "À Faire",
+    "doing": "En Cours",
+    "done": "Terminé",
+    "low": "Basse",
+    "medium": "Moyenne",
+    "high": "Haute",
+    "new": "Nouvelle Tâche",
+    "editTask": "Modifier la Tâche"
+  },
+  "import": {
+    "title": "Importer des Projets",
+    "selectFile": "Sélectionner un Fichier",
+    "importing": "Importation...",
+    "format": "Prend en charge les formats JSON et Excel (.xlsx, .xls)",
+    "dataFormat": "Format des Données:"
+  },
+  "export": {
+    "title": "Exporter des Projets",
+    "success": "Exportation réussie",
+    "error": "Échec de l'exportation",
+    "format": "Format",
+    "selectProjects": "Sélectionner les Projets à Exporter",
+    "selectAll": "Tout Sélectionner",
+    "deselectAll": "Tout Désélectionner",
+    "projectsSelected": "projets sélectionnés",
+    "exporting": "Exportation...",
+    "export": "Exporter"
+  },
+  "duplicate": {
+    "projectNameExists": "Un projet nommé '{name}' existe déjà",
+    "projectNameExistsHint": "Voulez-vous créer quand même, mettre à jour le projet existant ou annuler?",
+    "createAnyway": "Créer Quand Même",
+    "updateExisting": "Mettre à Jour l'Existant",
+    "cancel": "Annuler"
+  },
+  "notification": {
+    "title": "Notifications",
+    "markAllRead": "Tout Marquer comme Lu",
+    "clear": "Tout Effacer",
+    "noNotifications": "Aucune notification",
+    "taskReminder": "Rappel d'Échéance de Tâche",
+    "phaseReminder": "Rappel d'Échéance de Phase",
+    "settings": "Paramètres de Notification",
+    "inApp": "Dans l'App",
+    "email": "Email",
+    "dingtalk": "DingTalk",
+    "test": "Tester la Notification",
+    "testDingtalk": "Tester DingTalk"
+  },
+  "recycleBin": {
+    "title": "Corbeille",
+    "empty": "La corbeille est vide",
+    "restore": "Restaurer",
+    "delete": "Supprimer Définitivement",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer définitivement? Cette action est irréversible.",
+    "deletedAt": "Supprimé le",
+    "expiresAt": "Expire le",
+    "autoDelete": "Sera automatiquement supprimé après 30 jours"
+  },
+  "theme": {
+    "title": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
+  "language": {
+    "title": "Langue",
+    "zh": "简体中文",
+    "en": "English",
+    "fr": "Français",
+    "ja": "日本語"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "search": "Rechercher",
+    "noData": "Aucune donnée"
+  },
+  "gantt": {
+    "title": "Vue Gantt",
+    "noProject": "Aucune donnée de projet",
+    "hint": "Créez un projet dans la barre latérale pour voir le diagramme de Gantt"
+  },
+  "ai": {
+    "title": "AI Assistant",
+    "welcome": "Bonjour! Comment puis-je vous aider?",
+    "welcomeHint": "Demandez-moi d'analyser vos projets ou de rédiger des notifications",
+    "inputPlaceholder": "Tapez votre message...",
+    "thinking": "Réflexion en cours...",
+    "notEnabled": "L'IA n'est pas activée. Veuillez configurer dans les paramètres",
+    "newSession": "Nouvelle Session",
+    "confirmTitle": "Confirmer la Notification DingTalk",
+    "confirmSubtitle": "L'assistant IA souhaite envoyer la notification suivante",
+    "confirmSend": "Confirmer",
+    "confirmActionTitle": "Confirmer l'Action",
+    "confirmActionSubtitle": "L'assistant IA souhaite exécuter l'opération suivante",
+    "confirm": "Confirmer",
+    "attachImage": "Joindre une image"
+  }
+}
