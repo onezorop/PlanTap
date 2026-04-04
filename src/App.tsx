@@ -46,9 +46,9 @@ function App() {
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {viewMode === 'list' && <Sidebar />}
-      <div className="flex-1 flex flex-col ml-0">
+      <div className="flex-1 flex flex-col ml-0 relative">
         <Header />
-        <main className="flex-1 p-6 overflow-hidden">
+        <main className="flex-1 p-6 overflow-auto">
           {viewMode === 'list' ? <MainContent /> : <GanttView />}
         </main>
       </div>
