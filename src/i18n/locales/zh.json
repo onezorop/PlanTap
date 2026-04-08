@@ -24,12 +24,16 @@
     "startDate": "开始日期",
     "endDate": "结束日期",
     "progress": "进度",
+    "status": "状态",
     "create": "创建项目",
     "edit": "编辑项目",
     "delete": "删除项目",
     "deleteConfirm": "确定要删除该项目吗？所有关联的阶段和任务都会被删除。",
     "new": "新建项目",
-    "editProject": "编辑项目"
+    "editProject": "编辑项目",
+    "todo": "待办",
+    "doing": "进行中",
+    "done": "已完成"
   },
   "phase": {
     "name": "阶段名称",

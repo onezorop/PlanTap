@@ -24,12 +24,16 @@
     "startDate": "開始日",
     "endDate": "終了日",
     "progress": "進捗",
+    "status": "ステータス",
     "create": "プロジェクト作成",
     "edit": "プロジェクト編集",
     "delete": "プロジェクト削除",
     "deleteConfirm": "このプロジェクトを削除しますか？関連するすべてのフェーズとタスクが削除されます。",
     "new": "新規プロジェクト",
-    "editProject": "プロジェクト編集"
+    "editProject": "プロジェクト編集",
+    "todo": "未着手",
+    "doing": "進行中",
+    "done": "完了"
   },
   "phase": {
     "name": "フェーズ名",

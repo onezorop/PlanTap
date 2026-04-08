@@ -13,7 +13,7 @@ let notificationInterval = null;
 let dbPath;
 
 // Current schema version - increment this each time a migration is added
-const CURRENT_SCHEMA_VERSION = 2;
+const CURRENT_SCHEMA_VERSION = 3;
 
 // Notification state
 let lastNotifiedTasks = new Map(); // taskId -> last notified time
@@ -136,6 +136,17 @@ function runMigrations(targetVersion) {
       console.log('Migration v2: Added deletedAt column to projects table');
     }
     setDbVersion(2);
+  }
+
+  // Migration v3: Add status column to projects
+  if (getDbVersion() < 3) {
+    const projectColumns = dbAll("PRAGMA table_info(projects)");
+    const hasStatus = projectColumns.some(col => col.name === 'status');
+    if (!hasStatus) {
+      dbExec("ALTER TABLE projects ADD COLUMN status TEXT DEFAULT 'todo'");
+      console.log('Migration v3: Added status column to projects table');
+    }
+    setDbVersion(3);
   }
 
   console.log(`Migrations complete. Database is now at version ${getDbVersion()}`);
@@ -537,17 +548,20 @@ ipcMain.handle('db:getAllData', () => {
 
 ipcMain.handle('db:projects:add', (_, project) => {
   dbRun(`
-    INSERT INTO projects (id, name, startDate, endDate, progress, deletedAt)
-    VALUES (?, ?, ?, ?, ?, NULL)
-  `, [project.id, project.name, project.startDate, project.endDate, project.progress]);
+    INSERT INTO projects (id, name, startDate, endDate, progress, status, deletedAt)
+    VALUES (?, ?, ?, ?, ?, ?, NULL)
+  `, [project.id, project.name, project.startDate, project.endDate, project.progress, project.status || 'todo']);
   return project;
 });
 
 ipcMain.handle('db:projects:update', (_, id, updates) => {
-  const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
-  const values = Object.values(updates);
+  const filteredUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([_, v]) => v !== undefined)
+  );
+  const fields = Object.keys(filteredUpdates).map(k => `${k} = ?`).join(', ');
+  const values = Object.values(filteredUpdates);
   dbRun(`UPDATE projects SET ${fields} WHERE id = ?`, [...values, id]);
-  return { id, ...updates };
+  return { id, ...filteredUpdates };
 });
 
 // Soft delete - move to recycle bin
@@ -611,10 +625,13 @@ ipcMain.handle('db:phases:add', (_, phase) => {
 });
 
 ipcMain.handle('db:phases:update', (_, id, updates) => {
-  const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
-  const values = Object.values(updates);
+  const filteredUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([_, v]) => v !== undefined)
+  );
+  const fields = Object.keys(filteredUpdates).map(k => `${k} = ?`).join(', ');
+  const values = Object.values(filteredUpdates);
   dbRun(`UPDATE phases SET ${fields} WHERE id = ?`, [...values, id]);
-  return { id, ...updates };
+  return { id, ...filteredUpdates };
 });
 
 ipcMain.handle('db:phases:delete', (_, id) => {
@@ -647,7 +664,10 @@ ipcMain.handle('db:tasks:add', (_, task) => {
 });
 
 ipcMain.handle('db:tasks:update', (_, id, updates) => {
-  const finalUpdates = { ...updates };
+  const filteredUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([_, v]) => v !== undefined)
+  );
+  const finalUpdates = { ...filteredUpdates };
   if (finalUpdates.tags) {
     finalUpdates.tags = JSON.stringify(finalUpdates.tags);
   }
@@ -657,7 +677,7 @@ ipcMain.handle('db:tasks:update', (_, id, updates) => {
   const fields = Object.keys(finalUpdates).map(k => `${k} = ?`).join(', ');
   const values = Object.values(finalUpdates);
   dbRun(`UPDATE tasks SET ${fields} WHERE id = ?`, [...values, id]);
-  return { id, ...updates };
+  return { id, ...filteredUpdates };
 });
 
 ipcMain.handle('db:tasks:delete', (_, id) => {

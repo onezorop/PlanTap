@@ -30,8 +30,11 @@ export default function PhaseModal({ phase, projectId, onClose }: PhaseModalProp
     }
 
     const data = {
-      ...formData,
-      actualEndDate: formData.actualEndDate || undefined,
+      name: formData.name,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      status: formData.status,
+      ...(formData.actualEndDate && { actualEndDate: formData.actualEndDate }),
     };
 
     if (isEditing) {

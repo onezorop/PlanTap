@@ -24,12 +24,16 @@
     "startDate": "Date de Début",
     "endDate": "Date de Fin",
     "progress": "Progression",
+    "status": "Statut",
     "create": "Créer un Projet",
     "edit": "Modifier le Projet",
     "delete": "Supprimer le Projet",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce projet? Toutes les phases et tâches associées seront supprimées.",
     "new": "Nouveau Projet",
-    "editProject": "Modifier le Projet"
+    "editProject": "Modifier le Projet",
+    "todo": "À Faire",
+    "doing": "En Cours",
+    "done": "Terminé"
   },
   "phase": {
     "name": "Nom de la Phase",

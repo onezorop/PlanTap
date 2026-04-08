@@ -4,6 +4,7 @@ export interface Project {
   startDate: string;
   endDate: string;
   progress: number;
+  status: 'todo' | 'doing' | 'done';
   deletedAt?: string;
 }
 

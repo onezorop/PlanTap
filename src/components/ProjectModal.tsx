@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../stores/projectStore';
 import DuplicateNameModal from './DuplicateNameModal';
@@ -20,7 +20,19 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
     startDate: project?.startDate || '',
     endDate: project?.endDate || '',
     progress: project?.progress || 0,
+    status: (project?.status || 'todo') as 'todo' | 'doing' | 'done',
   });
+
+  // Update form data when project changes
+  useEffect(() => {
+    setFormData({
+      name: project?.name || '',
+      startDate: project?.startDate || '',
+      endDate: project?.endDate || '',
+      progress: project?.progress || 0,
+      status: (project?.status || 'todo') as 'todo' | 'doing' | 'done',
+    });
+  }, [project]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,6 +162,23 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
                 }
                 className="w-full"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('project.status')}
+              </label>
+              <select
+                className="input-notion"
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({ ...formData, status: e.target.value as 'todo' | 'doing' | 'done' })
+                }
+              >
+                <option value="todo">{t('project.todo')}</option>
+                <option value="doing">{t('project.doing')}</option>
+                <option value="done">{t('project.done')}</option>
+              </select>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

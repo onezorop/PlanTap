@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useProjectStore } from './stores/projectStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useChatStore } from './stores/chatStore';
@@ -9,6 +10,7 @@ import GanttView from './components/GanttView';
 import AIChatPanel from './components/AIChatPanel';
 
 function App() {
+  const { t } = useTranslation();
   const { viewMode, isLoading, init } = useProjectStore();
   const { theme } = useSettingsStore();
   const { init: initChat } = useChatStore();
@@ -25,6 +27,11 @@ function App() {
     };
     applyTheme();
   }, [theme]);
+
+  // Initialize i18n title
+  useEffect(() => {
+    document.title = t('app.name');
+  }, [t]);
 
   useEffect(() => {
     // Run both stores initialization in parallel
