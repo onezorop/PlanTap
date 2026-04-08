@@ -4,9 +4,10 @@ import type { InAppNotification } from '../types';
 
 interface NotificationPanelProps {
   onClose: () => void;
+  onUnreadCountChange?: () => void;
 }
 
-export default function NotificationPanel({  }: NotificationPanelProps) {
+export default function NotificationPanel({ onUnreadCountChange }: NotificationPanelProps) {
   const { t } = useTranslation();
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
 
@@ -32,6 +33,7 @@ export default function NotificationPanel({  }: NotificationPanelProps) {
     if (window.electronAPI) {
       await window.electronAPI.markNotificationRead(id);
       loadNotifications();
+      onUnreadCountChange?.();
     }
   };
 
@@ -39,6 +41,7 @@ export default function NotificationPanel({  }: NotificationPanelProps) {
     if (window.electronAPI) {
       await window.electronAPI.markAllNotificationsRead();
       loadNotifications();
+      onUnreadCountChange?.();
     }
   };
 
@@ -46,6 +49,7 @@ export default function NotificationPanel({  }: NotificationPanelProps) {
     if (window.electronAPI) {
       await window.electronAPI.clearNotifications();
       loadNotifications();
+      onUnreadCountChange?.();
     }
   };
 

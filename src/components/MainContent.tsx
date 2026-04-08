@@ -39,15 +39,15 @@ export default function MainContent() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 h-full flex flex-col">
       {/* Project Header */}
-      <div className="card-notion p-6">
+      <div className="card-notion p-3 flex-shrink-0">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+            <h2 className="text-xl font-medium text-gray-800 mb-2">
               {selectedProject.name}
             </h2>
-            <div className="flex gap-6 text-sm text-gray-500">
+            <div className="flex gap-4 text-xs text-gray-500">
               <span>
                 <i className="fa-solid fa-calendar mr-2" />
                 {selectedProject.startDate} ~ {selectedProject.endDate}

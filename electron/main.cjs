@@ -1129,6 +1129,12 @@ ipcMain.handle('ai:messages:clear', () => {
 
 // IPC: Send AI Notification (requires user confirmation)
 ipcMain.handle('ai:notification:send', (_, { title, message }) => {
+  // Check if there are any active projects (not in recycle bin)
+  const activeProjects = dbAll('SELECT id FROM projects WHERE deletedAt IS NULL LIMIT 1');
+  if (activeProjects.length === 0) {
+    return { success: false, error: '没有活动项目，无法发送通知' };
+  }
+
   const settings = getNotificationSettings();
 
   if (settings.dingtalk.enabled && settings.dingtalk.webhookUrl) {

@@ -58,9 +58,9 @@ export default function PhaseSection({ projectId }: PhaseSectionProps) {
   };
 
   return (
-    <div className="card-notion">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="font-semibold text-gray-700">
+    <div className="card-notion flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="p-2 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <h3 className="font-medium text-gray-700 text-sm">
           <i className="fa-solid fa-layer-group mr-2" />
           {t('phase.list')}
         </h3>
@@ -82,11 +82,11 @@ export default function PhaseSection({ projectId }: PhaseSectionProps) {
           <p>{t('phase.empty')}</p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-gray-50 overflow-y-auto flex-1">
           {phases.map((phase) => (
             <div key={phase.id}>
               <div
-                className="p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                className="p-2 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors"
                 onClick={() => toggleExpanded(phase.id)}
               >
                 <i
@@ -96,7 +96,7 @@ export default function PhaseSection({ projectId }: PhaseSectionProps) {
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <span className="font-medium">{phase.name}</span>
+                    <span className="text-sm font-medium">{phase.name}</span>
                     {getStatusBadge(phase.status)}
                   </div>
                   <div className="text-xs text-gray-400 mt-1">
@@ -123,7 +123,7 @@ export default function PhaseSection({ projectId }: PhaseSectionProps) {
               </div>
 
               {expandedPhases.has(phase.id) && (
-                <div className="bg-gray-50 p-4">
+                <div className="bg-gray-50 p-3">
                   <TaskSection phaseId={phase.id} />
                 </div>
               )}

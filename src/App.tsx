@@ -51,13 +51,13 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {viewMode === 'list' && <Sidebar />}
-      <div className="flex-1 flex flex-col ml-0 relative z-10">
-        <Header />
-        <main className="flex-1 p-6 overflow-auto">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <Header />
+      <div className="flex flex-1 min-h-0">
+        {viewMode === 'list' && <div className="m-2"><Sidebar /></div>}
+        <div className="flex-1 m-2 overflow-auto">
           {viewMode === 'list' ? <MainContent /> : <GanttView />}
-        </main>
+        </div>
       </div>
       <AIChatPanel />
     </div>

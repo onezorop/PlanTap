@@ -125,8 +125,8 @@ export default function GanttView() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b border-gray-100 dark:border-[var(--border-color)] flex-shrink-0">
-        <h3 className="font-semibold text-gray-700 dark:text-[var(--text-primary)]">
+      <div className="p-2 border-b border-gray-100 dark:border-[var(--border-color)] flex-shrink-0">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-[var(--text-primary)]">
           <i className="fa-solid fa-chart-gantt mr-2" />
           {t('gantt.title')}
         </h3>
@@ -159,7 +159,7 @@ export default function GanttView() {
                     style={{ height: 44, backgroundColor: 'var(--bg-primary)' }}
                   >
                     <i className="fa-solid fa-folder text-yellow-500"></i>
-                    <span className="truncate text-gray-700 dark:text-[var(--text-primary)]">{project.name}</span>
+                    <span className="truncate text-gray-700 dark:text-[var(--text-primary)]" title={project.name}>{project.name}</span>
                   </div>
                   {/* Phase rows */}
                   {projectPhases.map((phase) => {
@@ -179,7 +179,7 @@ export default function GanttView() {
                                 : 'fa-circle text-gray-300'
                             }`}
                           />
-                          <span className="truncate text-gray-700 dark:text-[var(--text-primary)]">{phase.name}</span>
+                          <span className="truncate text-gray-700 dark:text-[var(--text-primary)]" title={phase.name}>{phase.name}</span>
                         </div>
                         {/* Task rows */}
                         {phaseTasks.map((task) => (
@@ -197,7 +197,7 @@ export default function GanttView() {
                                   : 'fa-square text-gray-300'
                               }`}
                             />
-                            <span className="truncate">{task.name}</span>
+                            <span className="truncate" title={task.name}>{task.name}</span>
                           </div>
                         ))}
                       </div>
