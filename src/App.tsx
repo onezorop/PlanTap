@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useProjectStore } from './stores/projectStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useChatStore } from './stores/chatStore';
@@ -9,6 +10,7 @@ import GanttView from './components/GanttView';
 import AIChatPanel from './components/AIChatPanel';
 
 function App() {
+  const { t } = useTranslation();
   const { viewMode, isLoading, init } = useProjectStore();
   const { theme } = useSettingsStore();
   const { init: initChat } = useChatStore();
@@ -25,6 +27,11 @@ function App() {
     };
     applyTheme();
   }, [theme]);
+
+  // Initialize i18n title
+  useEffect(() => {
+    document.title = t('app.name');
+  }, [t]);
 
   useEffect(() => {
     // Run both stores initialization in parallel
@@ -44,13 +51,13 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {viewMode === 'list' && <Sidebar />}
-      <div className="flex-1 flex flex-col ml-0 relative z-10">
-        <Header />
-        <main className="flex-1 p-6 overflow-auto">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <Header />
+      <div className="flex flex-1 min-h-0">
+        {viewMode === 'list' && <div className="m-2"><Sidebar /></div>}
+        <div className="flex-1 m-2 overflow-auto">
           {viewMode === 'list' ? <MainContent /> : <GanttView />}
-        </main>
+        </div>
       </div>
       <AIChatPanel />
     </div>

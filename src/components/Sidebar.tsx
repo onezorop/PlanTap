@@ -103,9 +103,9 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="w-[280px] bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 m-4 mr-0 h-[calc(100vh-32px)] overflow-y-auto flex flex-col">
+      <aside className="w-[280px] bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 mr-0 h-full overflow-y-auto flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('app.name')}</h1>
+          <h1 className="text-base font-medium text-gray-800 dark:text-gray-100">{t('app.name')}</h1>
           <div className="flex gap-1">
             <button
               onClick={() => {
@@ -167,8 +167,8 @@ export default function Sidebar() {
                           isExpanded ? 'rotate-90' : ''
                         }`}
                       />
-                      <i className="fa-solid fa-folder text-yellow-500"></i>
-                      <span className="flex-1 truncate">{project.name}</span>
+                      <i className="fa-solid fa-folder text-yellow-500 text-sm"></i>
+                      <span className="flex-1 truncate text-sm" title={project.name}>{project.name}</span>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100">
                         <button
                           onClick={(e) => handleEditProject(project, e)}

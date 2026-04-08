@@ -95,6 +95,7 @@ export default function ImportModal({ onClose }: ImportModalProps) {
       startDate: projectData.startDate || new Date().toISOString().split('T')[0],
       endDate: projectData.endDate || new Date().toISOString().split('T')[0],
       progress: projectData.progress || 0,
+      status: projectData.status || 'todo',
     };
 
     await addProject(project);

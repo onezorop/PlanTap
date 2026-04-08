@@ -83,7 +83,7 @@ export default function Header() {
               )}
             </button>
             {showNotifications && (
-              <NotificationPanel onClose={() => setShowNotifications(false)} />
+              <NotificationPanel onClose={() => { setShowNotifications(false); loadUnreadCount(); }} onUnreadCountChange={loadUnreadCount} />
             )}
           </div>
 
